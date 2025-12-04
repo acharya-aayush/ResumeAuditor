@@ -13,17 +13,18 @@ export const SourceViewerModal: React.FC<SourceViewerModalProps> = ({ isOpen, on
   const [activeTab, setActiveTab] = useState<'JD' | 'RESUME'>('JD');
   const [selectedCandidateIndex, setSelectedCandidateIndex] = useState(0);
 
-  if (!isOpen) return null;
-
   const hasCandidates = candidates && candidates.length > 0;
   const hasResume = !!resumeContent;
   
-  // Auto-switch if no JD
+  // useEffect MUST be called before any conditional returns
   React.useEffect(() => {
       if (!jobDescription && (hasResume || hasCandidates)) {
           setActiveTab('RESUME');
       }
   }, [jobDescription, hasResume, hasCandidates]);
+
+  // Conditional return AFTER all hooks
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">

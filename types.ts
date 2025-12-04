@@ -90,6 +90,7 @@ export enum AIProvider {
   OPENAI = 'OPENAI',
   OPENROUTER = 'OPENROUTER',
   GROQ = 'GROQ',
+  GEMINI = 'GEMINI',
   OLLAMA = 'OLLAMA',
   CUSTOM = 'CUSTOM' 
 }

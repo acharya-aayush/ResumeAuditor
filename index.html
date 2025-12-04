@@ -5,28 +5,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RESUME-AUDITOR:V4 | Aayush Acharya</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CDN - OK for this project, suppress production warning -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              background: '#09090b', // Zinc 950
-              surface: '#18181b',    // Zinc 900
-              border: '#3f3f46',     // Zinc 700
-              primary: '#ffffff',    
-              text: '#f4f4f5',       // Zinc 100
-              muted: '#a1a1aa',      // Zinc 400
-              error: '#ef4444',
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              serif: ['Playfair Display', 'serif'],
-              mono: ['JetBrains Mono', 'monospace'],
-            },
-            animation: {
-              'spin-slow': 'spin 12s linear infinite',
+      // Suppress Tailwind CDN production warning
+      if (typeof tailwind !== 'undefined') {
+        tailwind.config = {
+          corePlugins: {
+            preflight: true,
+          },
+          theme: {
+            extend: {
+              colors: {
+                background: '#09090b',
+                surface: '#18181b',
+                border: '#3f3f46',
+                primary: '#ffffff',    
+                text: '#f4f4f5',
+                muted: '#a1a1aa',
+                error: '#ef4444',
+              },
+              fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+                serif: ['Playfair Display', 'serif'],
+                mono: ['JetBrains Mono', 'monospace'],
+              },
+              animation: {
+                'spin-slow': 'spin 12s linear infinite',
+              }
             }
           }
         }

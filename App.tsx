@@ -85,8 +85,6 @@ const App: React.FC = () => {
     const savedConfig = localStorage.getItem('careerfry_config');
     if (savedConfig) {
       try { setAiConfig(JSON.parse(savedConfig)); } catch (e) {}
-    } else if (process.env.API_KEY) {
-       setAiConfig(prev => ({ ...prev, apiKey: process.env.API_KEY || '' }));
     }
     const savedHistory = localStorage.getItem('careerfry_history');
     if (savedHistory) {
@@ -131,12 +129,7 @@ const App: React.FC = () => {
 
   const handleApiError = (err: any) => {
       console.error(err);
-      if (err.message && (err.message.includes("Limit Reached") || err.message.includes("429"))) {
-          setErrorMsg("DAILY FREE LIMIT REACHED. PLEASE ADD A KEY.");
-          setIsSettingsOpen(true);
-      } else {
-          setErrorMsg(err.message || "SYSTEM FAILURE.");
-      }
+      setErrorMsg(err.message || "An error occurred. Please try again.");
       // Do NOT reset app state on error to allow retry
       // Only set to ERROR if we don't have a result yet (initial loading)
       if (!result && !comparisonResult) {
