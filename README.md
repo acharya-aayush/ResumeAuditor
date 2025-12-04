@@ -1,35 +1,99 @@
 
-# RESUME_AUDITOR_V4 📰
+# Resume Auditor V4
 
-A brutal, minimalist, AI-powered resume analyzer with a "Newspaper Dark Mode" aesthetic.
+A comprehensive AI-powered career toolkit that analyzes, rewrites, and optimizes professional resumes. Built with a minimalist dark aesthetic and multi-provider AI support.
 
-## Overview
+## Features
 
-Resume Auditor V4 audits resumes using multimodal AI intelligence. It ingests PDFs or Images, "sees" the layout, and returns a structured JSON critique formatted like a harsh editorial column.
+### Core Analysis
+- **Resume Audit** - Deep analysis with scoring, red/green flags, and line-by-line improvement suggestions
+- **Psychometric Profile** - Personality archetype detection based on writing style and word choice
+- **ATS Compatibility** - Keyword gap analysis against job descriptions
 
-**Features:**
-- **Solo Audit**: Individual deep-dive analysis with ATS keyword gap detection.
-- **Group Audit**: Multi-candidate comparison and ranking (Max 5).
-- **Remaster**: AI-powered resume rewriting and formatting.
-- **Provider Agnostic**: Built to run on Google, OpenAI, OpenRouter, or Local LLMs.
-- **BYOK (Bring Your Own Key)**: Privacy-focused client-side key management.
+### Career Tools
+- **Resume Remaster** - AI-powered rewriting with before/after comparisons
+- **Interview Prep** - Generated questions based on resume weak spots with answer guides
+- **Career Pivot** - Alternative career path suggestions with skill translation
+- **90-Day Plan** - Structured onboarding plan for new roles
+- **Skill Roadmap** - 4-week learning plans for target skills
 
-## Setup
+### Outreach & Branding
+- **LinkedIn Generator** - Optimized headlines and About sections
+- **GitHub Profile** - README.md generator for developer profiles
+- **Cold Email Architect** - Three email templates (direct, value-first, warm)
+- **Salary Scripts** - Negotiation email templates at different risk levels
 
-1. Clone repo.
-2. `npm install`
-3. `npm start`
-4. Click the "Gear" icon in the top right to configure your AI Provider.
+### Comparison Mode
+- **Multi-Resume Battle** - Compare up to 5 candidates with ranking
+- **Dream Team** - AI-selected team composition with synergy analysis
 
-## Supported Providers
+## Quick Start
 
-| Provider | Description | Capabilities |
-|----------|-------------|--------------|
-| **Gemini** | Native Multimodal | Vision + Text |
-| **OpenAI** | Industry Standard | Vision + Text |
-| **OpenRouter** | Access to Open Source (Llama, DeepSeek) | Text Only (mostly) |
-| **Ollama** | Local LLM | Text Only |
+```bash
+# Install dependencies
+npm install
 
-## Architecture
+# Start development server
+npm run dev
 
-Built with React, Tailwind CSS (Zinc/Monochrome), and a custom Strategy Pattern service layer to handle multiple AI providers.
+# Build for production
+npm run build
+```
+
+## Configuration
+
+Click the settings icon to configure your AI provider:
+
+| Provider | Free Tier | Vision Support | Speed |
+|----------|-----------|----------------|-------|
+| Gemini | Yes (60 req/min) | Yes | Fast |
+| OpenRouter | Yes (select models) | Limited | Varies |
+| Groq | Yes (30 req/min) | No | Very Fast |
+| OpenAI | No | Yes | Fast |
+| Ollama | Yes (local) | No | Depends on hardware |
+
+### Recommended Setup
+1. Get a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Open Settings in the app
+3. Select "Gemini" provider
+4. Paste your API key
+5. Use `gemini-2.5-flash` model (default)
+
+## Tech Stack
+
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Document Export**: docx, file-saver
+
+## Project Structure
+
+```
+├── App.tsx                 # Main application controller
+├── types.ts                # TypeScript definitions
+├── services/
+│   ├── aiService.ts        # AI provider integration
+│   └── githubService.ts    # GitHub API client
+└── components/
+    ├── RoastDashboard.tsx  # Main analysis display
+    ├── SettingsModal.tsx   # Provider configuration
+    ├── RemasterWizard.tsx  # Resume rewriting
+    └── ...                 # Feature components
+```
+
+## Privacy
+
+- All processing happens client-side
+- API keys stored in browser localStorage only
+- No server-side data collection
+- Resume content sent directly to your chosen AI provider
+
+## License
+
+MIT
+
+## Author
+
+Aayush Acharya
