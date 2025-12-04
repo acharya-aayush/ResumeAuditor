@@ -1,0 +1,21 @@
+# Fine-tuning Requirements for ResumeAuditor
+# Optimized for RTX 4050 (4GB VRAM)
+
+# Core training libraries
+unsloth>=2024.11
+trl>=0.11.0
+peft>=0.13.0
+accelerate>=0.34.0
+bitsandbytes>=0.44.0
+
+# Data processing
+datasets>=3.0.0
+transformers>=4.45.0
+
+# GGUF export
+llama-cpp-python>=0.3.0
+
+# Utilities
+huggingface_hub>=0.25.0
+safetensors>=0.4.0
+sentencepiece>=0.2.0

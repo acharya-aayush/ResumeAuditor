@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RESUME-AUDITOR:V4 | Aayush Acharya</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              background: '#09090b', // Zinc 950
+              surface: '#18181b',    // Zinc 900
+              border: '#3f3f46',     // Zinc 700
+              primary: '#ffffff',    
+              text: '#f4f4f5',       // Zinc 100
+              muted: '#a1a1aa',      // Zinc 400
+              error: '#ef4444',
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            animation: {
+              'spin-slow': 'spin 12s linear infinite',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #050505;
+        color: #f4f4f5;
+        font-family: 'Inter', sans-serif;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 0px; }
+      ::-webkit-scrollbar-thumb:hover { background: #71717a; }
+      
+      .newspaper-border { border: 1px solid #3f3f46; }
+      .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+
+      /* Markdown Styles */
+      .markdown-body h1 { font-family: 'Playfair Display', serif; font-size: 2em; margin-bottom: 0.5em; border-bottom: 1px solid #3f3f46; padding-bottom: 0.2em; }
+      .markdown-body h2 { font-family: 'Playfair Display', serif; font-size: 1.5em; margin-top: 1em; margin-bottom: 0.5em; text-transform: uppercase; letter-spacing: 0.05em; }
+      .markdown-body h3 { font-family: 'Inter', sans-serif; font-size: 1.1em; font-weight: bold; margin-top: 1em; }
+      .markdown-body p { margin-bottom: 0.8em; line-height: 1.6; color: #d4d4d8; }
+      .markdown-body ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+      .markdown-body li { margin-bottom: 0.3em; }
+      .markdown-body strong { color: white; font-weight: 600; }
+
+      /* Print Optimizations - FORCE CLEAN PDF SAVES */
+      @media print {
+        /* Hide everything by default */
+        body > * { display: none !important; }
+        
+        /* Show only specific print containers (like the Remaster output) */
+        body > .print-force, 
+        body > * > .print-force,
+        body > * > * > .print-force,
+        body > * > * > * > .print-force { 
+          display: block !important; 
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+          color: black !important;
+          z-index: 9999 !important;
+        }
+
+        /* Override dark mode text/bg for print containers */
+        .print-force {
+          background-color: white !important;
+          color: black !important;
+        }
+        
+        .print-force .markdown-body { color: black !important; }
+        .print-force .markdown-body p { color: black !important; }
+        .print-force .markdown-body strong { color: black !important; }
+        .print-force .markdown-body h1, 
+        .print-force .markdown-body h2 { border-bottom-color: black !important; color: black !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

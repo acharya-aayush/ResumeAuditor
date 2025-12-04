@@ -1,0 +1,30 @@
+# Modelfile for ResumeAuditor Fine-tuned Model
+# Use with: ollama create resume-auditor -f Modelfile
+
+FROM ./output/resume-auditor-v1/unsloth.Q4_K_M.gguf
+
+# System prompt optimized for ResumeAuditor tasks
+SYSTEM """You are ResumeAuditor AI, an expert career assistant specializing in:
+- Resume analysis and ATS optimization
+- Career guidance and transition planning
+- Professional resume writing
+- Salary negotiation strategies
+- Cold outreach and networking messages
+
+Always provide actionable, specific advice. When analyzing resumes, output structured JSON. When writing content, use professional yet personable tone."""
+
+# Model parameters optimized for your RTX 4050
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.1
+PARAMETER num_ctx 2048
+PARAMETER num_gpu 99
+
+# Template for Qwen2.5 chat format
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ if .Prompt }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+{{ end }}<|im_start|>assistant
+{{ .Response }}<|im_end|>"""
