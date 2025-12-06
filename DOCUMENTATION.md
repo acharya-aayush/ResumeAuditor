@@ -1,9 +1,9 @@
 
-# Resume Auditor V4 - Technical Documentation
+# Resume Auditor V5 - Technical Documentation
 
 ## 1. Overview
 
-Resume Auditor V4 is a client-side Single Page Application (SPA) that provides AI-powered resume analysis and career tools. The application uses a Bring Your Own Key (BYOK) architecture, ensuring user data remains private and is only transmitted directly to the user's chosen AI provider.
+Resume Auditor V5 is a client-side Single Page Application (SPA) that provides AI-powered resume analysis and career tools. The application uses a Bring Your Own Key (BYOK) architecture, ensuring user data remains private and is only transmitted directly to the user's chosen AI provider.
 
 ### 1.1 Design Principles
 
