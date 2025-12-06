@@ -38,7 +38,7 @@ Browser
         +-- OpenRouter API
         +-- Groq API
         +-- Ollama (Local)
-```
+````
 
 ### 2.2 Technology Stack
 
