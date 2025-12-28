@@ -90,9 +90,13 @@ Click the settings icon to configure your AI provider:
 - No server-side data collection
 - Resume content sent directly to your chosen AI provider
 
+
 ## License
 
-MIT
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.
+
+- You are free to use, modify, and distribute this software, provided that any derivative works are also licensed under GPLv3.
+- See the [LICENSE](./LICENSE) file for the full text.
 
 ## Author
 

@@ -1,18 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback, useMemo } from 'react';
 import { FileUpload } from './components/FileUpload';
-import { RoastDashboard } from './components/RoastDashboard';
 import { SettingsModal } from './components/SettingsModal';
-import { RemasterWizard } from './components/RemasterWizard';
 import { HistoryDrawer } from './components/HistoryDrawer';
-import { ComparatorView } from './components/ComparatorView';
-import { InterviewPrep } from './components/InterviewPrep';
-import { CareerPivot } from './components/CareerPivot';
-import { SkillRoadmap } from './components/SkillRoadmap';
-import { LinkedInGenerator } from './components/LinkedInGenerator';
-import { GithubProfileGenerator } from './components/GithubProfileGenerator';
-import { ColdEmailArchitect } from './components/ColdEmailArchitect';
-import { Plan90Days } from './components/Plan90Days';
-import { SalaryScripts } from './components/SalaryScripts';
+
+// Code-split heavy components for faster initial load
+const RoastDashboard = lazy(() => import('./components/RoastDashboard').then(m => ({ default: m.RoastDashboard })));
+const RemasterWizard = lazy(() => import('./components/RemasterWizard').then(m => ({ default: m.RemasterWizard })));
+const ComparatorView = lazy(() => import('./components/ComparatorView').then(m => ({ default: m.ComparatorView })));
+const InterviewPrep = lazy(() => import('./components/InterviewPrep').then(m => ({ default: m.InterviewPrep })));
+const CareerPivot = lazy(() => import('./components/CareerPivot').then(m => ({ default: m.CareerPivot })));
+const SkillRoadmap = lazy(() => import('./components/SkillRoadmap').then(m => ({ default: m.SkillRoadmap })));
+const LinkedInGenerator = lazy(() => import('./components/LinkedInGenerator').then(m => ({ default: m.LinkedInGenerator })));
+const GithubProfileGenerator = lazy(() => import('./components/GithubProfileGenerator').then(m => ({ default: m.GithubProfileGenerator })));
+const ColdEmailArchitect = lazy(() => import('./components/ColdEmailArchitect').then(m => ({ default: m.ColdEmailArchitect })));
+const Plan90Days = lazy(() => import('./components/Plan90Days').then(m => ({ default: m.Plan90Days })));
+const SalaryScripts = lazy(() => import('./components/SalaryScripts').then(m => ({ default: m.SalaryScripts })));
 
 import { 
     analyzeResume, remasterResume, compareResumes, generateInterviewQuestions, 
@@ -27,11 +29,20 @@ import {
     Plan90DaysResult, SalaryNegotiationResult
 } from './types';
 
+// AIProvider is already imported above, used in handleRemaster for provider checks
+
 import { 
     Loader2, Settings, Command, Hammer, History, Target, User, Trash2, Users, 
     FileText, Type, X, Mic, Compass, Map, AlertCircle, Linkedin, Github, 
     Mail, Briefcase, BarChart, ShieldCheck, Calendar, DollarSign
 } from 'lucide-react';
+
+// Suspense loading fallback component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-12">
+    <Loader2 className="animate-spin text-white" size={32} />
+  </div>
+);
 
 const DEFAULT_CONFIG: AIConfig = {
   provider: AIProvider.OPENAI,
@@ -98,36 +109,40 @@ const App: React.FC = () => {
     }
   }, [interviewResult, pivotResult, roadmapResult, showRemaster, linkedinResult, githubProfileResult, showColdEmail, plan90Result, salaryResult]);
 
-  const handleSaveSettings = (newConfig: AIConfig) => {
+  const handleSaveSettings = useCallback((newConfig: AIConfig) => {
     setAiConfig(newConfig);
     localStorage.setItem('careerfry_config', JSON.stringify(newConfig));
-  };
+  }, []);
 
-  const saveToHistory = (newResult: AnalysisResult | ComparisonResult) => {
-    const updatedHistory = [newResult, ...history].slice(0, 10);
-    setHistory(updatedHistory);
-    localStorage.setItem('careerfry_history', JSON.stringify(updatedHistory));
-  };
+  const saveToHistory = useCallback((newResult: AnalysisResult | ComparisonResult) => {
+    setHistory(prev => {
+      const updatedHistory = [newResult, ...prev].slice(0, 10);
+      localStorage.setItem('careerfry_history', JSON.stringify(updatedHistory));
+      return updatedHistory;
+    });
+  }, []);
 
   // Update existing history item with new executive data (e.g., if we generate salary scripts later)
-  const updateCurrentHistory = (update: Partial<AnalysisResult>) => {
+  const updateCurrentHistory = useCallback((update: Partial<AnalysisResult>) => {
       if (!result) return;
       const updatedResult = { ...result, ...update };
       setResult(updatedResult);
       
-      const updatedHistory = history.map(h => 
+      setHistory(prev => {
+        const updatedHistory = prev.map(h => 
           (h.timestamp === result.timestamp) ? updatedResult : h
-      );
-      setHistory(updatedHistory);
-      localStorage.setItem('careerfry_history', JSON.stringify(updatedHistory));
-  };
+        );
+        localStorage.setItem('careerfry_history', JSON.stringify(updatedHistory));
+        return updatedHistory;
+      });
+  }, [result]);
 
-  const clearHistory = () => {
+  const clearHistory = useCallback(() => {
     setHistory([]);
     localStorage.removeItem('careerfry_history');
-  };
+  }, []);
 
-  const handleApiError = (err: any) => {
+  const handleApiError = useCallback((err: any) => {
       console.error(err);
       setErrorMsg(err.message || "An error occurred. Please try again.");
       // Do NOT reset app state on error to allow retry
@@ -136,7 +151,7 @@ const App: React.FC = () => {
           setAppState(AppState.ERROR);
       }
       setLoadingAction(null);
-  };
+  }, [result, comparisonResult]);
 
   const handleRoast = async () => {
     if (!file && !resumeText.trim()) return;
@@ -167,9 +182,25 @@ const App: React.FC = () => {
   };
 
   const handleRemaster = async (input: RemasterInput) => {
-    if (!file && !resumeText) return null;
+    // Must have resume content to remaster
+    if (!file && !resumeText) {
+        const error = new Error("No resume content available. Please upload a file or paste resume text first.");
+        handleApiError(error);
+        throw error;
+    }
+    
+    // Warn if using file-only mode with providers that don't support vision
+    if (file && !resumeText && (aiConfig.provider === AIProvider.OLLAMA)) {
+        const error = new Error("Local models don't support file uploads. Please paste resume text instead.");
+        handleApiError(error);
+        throw error;
+    }
+    
     try {
         const data = await remasterResume(file, resumeText, jobDesc, input, aiConfig);
+        if (!data || !data.markdownContent) {
+            throw new Error("Failed to generate remastered resume. The AI returned an incomplete response.");
+        }
         setRemasterResult(data);
         return data;
     } catch (err: any) {
@@ -347,7 +378,7 @@ const App: React.FC = () => {
 
         {/* RESULTS: SOLO */}
         {appState === AppState.COMPLETE && result && mode === 'SOLO' && (
-          <>
+          <Suspense fallback={<LoadingSpinner />}>
             <RoastDashboard data={result} onReset={handleReset} context={{ role: targetRole || "General", level: experienceLevel }} />
             
             <div className="max-w-6xl mx-auto mt-12 pb-20 border-t border-zinc-800 pt-12 no-print">
@@ -369,25 +400,29 @@ const App: React.FC = () => {
                   </div>
                </div>
             </div>
-          </>
+          </Suspense>
         )}
 
         {/* RESULTS: COMPARATOR */}
         {(appState === AppState.COMPARISON_COMPLETE) && comparisonResult && mode === 'GROUP' && (
-            <ComparatorView result={comparisonResult} onReset={handleReset} />
+            <Suspense fallback={<LoadingSpinner />}>
+                <ComparatorView result={comparisonResult} onReset={handleReset} />
+            </Suspense>
         )}
 
-        <div ref={bottomRef} className="scroll-mt-20">
-            {showRemaster && <RemasterWizard onRemaster={handleRemaster} result={remasterResult} onClose={() => setShowRemaster(false)} />}
-            {interviewResult && <InterviewPrep result={interviewResult} onClose={() => setInterviewResult(null)} />}
-            {pivotResult && <CareerPivot result={pivotResult} onClose={() => setPivotResult(null)} onGetRoadmap={(r) => wrapAction('ROADMAP', () => generateSkillRoadmap(file, resumeText, `Transition to: ${r}`, aiConfig).then(setRoadmapResult))} loadingRole={loadingAction === 'ROADMAP' ? '...' : null} />}
-            {roadmapResult && <SkillRoadmap result={roadmapResult} onClose={() => setRoadmapResult(null)} />}
-            {linkedinResult && <LinkedInGenerator result={linkedinResult} onClose={() => setLinkedinResult(null)} />}
-            {githubProfileResult && <GithubProfileGenerator result={githubProfileResult} onClose={() => setGithubProfileResult(null)} />}
-            {showColdEmail && <ColdEmailArchitect onGenerate={(c, m) => wrapAction('COLD', () => generateColdEmails(file, resumeText, `Company: ${c}, Manager: ${m}`, aiConfig).then(setColdEmailResult))} result={coldEmailResult} isLoading={loadingAction === 'COLD'} onClose={() => setShowColdEmail(false)} />}
-            {plan90Result && <Plan90Days result={plan90Result} onClose={() => setPlan90Result(null)} />}
-            {salaryResult && <SalaryScripts result={salaryResult} onClose={() => setSalaryResult(null)} />}
-        </div>
+        <Suspense fallback={<LoadingSpinner />}>
+          <div ref={bottomRef} className="scroll-mt-20">
+              {showRemaster && <RemasterWizard onRemaster={handleRemaster} result={remasterResult} onClose={() => setShowRemaster(false)} />}
+              {interviewResult && <InterviewPrep result={interviewResult} onClose={() => setInterviewResult(null)} />}
+              {pivotResult && <CareerPivot result={pivotResult} onClose={() => setPivotResult(null)} onGetRoadmap={(r) => wrapAction('ROADMAP', () => generateSkillRoadmap(file, resumeText, `Transition to: ${r}`, aiConfig).then(setRoadmapResult))} loadingRole={loadingAction === 'ROADMAP' ? '...' : null} />}
+              {roadmapResult && <SkillRoadmap result={roadmapResult} onClose={() => setRoadmapResult(null)} />}
+              {linkedinResult && <LinkedInGenerator result={linkedinResult} onClose={() => setLinkedinResult(null)} />}
+              {githubProfileResult && <GithubProfileGenerator result={githubProfileResult} onClose={() => setGithubProfileResult(null)} />}
+              {showColdEmail && <ColdEmailArchitect onGenerate={(c, m) => wrapAction('COLD', () => generateColdEmails(file, resumeText, `Company: ${c}, Manager: ${m}`, aiConfig).then(setColdEmailResult))} result={coldEmailResult} isLoading={loadingAction === 'COLD'} onClose={() => setShowColdEmail(false)} />}
+              {plan90Result && <Plan90Days result={plan90Result} onClose={() => setPlan90Result(null)} />}
+              {salaryResult && <SalaryScripts result={salaryResult} onClose={() => setSalaryResult(null)} />}
+          </div>
+        </Suspense>
       </main>
     </div>
   );

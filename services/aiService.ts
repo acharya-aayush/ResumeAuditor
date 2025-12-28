@@ -2,6 +2,9 @@ import { AnalysisResult, AIConfig, AIProvider, RemasterInput, RemasterResult, Co
 
 // --- UTILITIES ---
 
+// Simple request deduplication to prevent double-clicks
+const pendingRequests = new Map<string, Promise<any>>();
+
 const fileToBase64 = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -22,8 +25,8 @@ const cleanJsonOutput = (text: string): string => {
   if (!text) return "{}";
   let cleaned = text.trim();
   
-  // 1. Remove Markdown fences (Standard & Loose)
-  cleaned = cleaned.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '');
+  // 1. Remove Markdown fences (Standard & Loose) - more comprehensive
+  cleaned = cleaned.replace(/^```(?:json|JSON)?\s*/i, '').replace(/\s*```$/i, '');
   
   // 2. Remove comments (// ...) to prevent parse errors
   cleaned = cleaned.replace(/\/\/.*$/gm, ''); 
@@ -47,6 +50,10 @@ const cleanJsonOutput = (text: string): string => {
   // 5. Fix Trailing Commas (Common AI Error)
   // Replaces ", }" with "}" and ", ]" with "]"
   cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
+  
+  // 6. Fix unescaped newlines inside strings (common AI error)
+  // This is a basic fix - complex cases may need more sophisticated handling
+  cleaned = cleaned.replace(/([^\\])"([^"]*)\n([^"]*)"(?=\s*[,}\]])/g, '$1"$2\\n$3"');
 
   return cleaned;
 };

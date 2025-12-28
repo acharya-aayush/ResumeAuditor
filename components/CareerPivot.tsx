@@ -36,70 +36,69 @@ export const CareerPivot: React.FC<CareerPivotProps> = ({ result, onClose, onGet
 
       <div className="grid md:grid-cols-3 gap-0 border-l border-zinc-800">
         {(result.options || []).map((option, idx) => (
-            <div key={idx} className="border-r border-b border-zinc-800 bg-black flex flex-col h-full hover:bg-zinc-900/10 transition-colors group relative">
+            <div key={idx} className="border-r border-b border-zinc-800 bg-black flex flex-col h-full hover:bg-zinc-900/10 transition-colors group">
                 
-                {/* Stamp Badge */}
-                <div className="absolute top-0 right-0 p-4">
-                     <span className={`text-[10px] font-mono font-bold px-2 py-1 uppercase border border-white ${
-                        option.marketOutlook === 'HIGH_GROWTH' ? 'bg-white text-black' :
-                        option.marketOutlook === 'SATURATED' ? 'bg-black text-white decoration-line-through' :
-                        'bg-zinc-800 text-zinc-300'
-                    }`}>
-                        {option.marketOutlook?.replace('_', ' ')}
-                    </span>
-                </div>
-
-                {/* Card Header */}
-                <div className="p-8 pb-4">
-                    <span className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest block mb-4">Option 0{idx+1}</span>
+                {/* Card Header - Restructured for proper layout */}
+                <div className="p-6 md:p-8 pb-4">
+                    {/* Top row: Option label + Market Outlook Badge */}
+                    <div className="flex items-start justify-between gap-2 mb-4">
+                        <span className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest shrink-0">Option 0{idx+1}</span>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-1 uppercase border border-white shrink-0 ${
+                            option.marketOutlook === 'HIGH_GROWTH' ? 'bg-white text-black' :
+                            option.marketOutlook === 'SATURATED' ? 'bg-black text-white line-through' :
+                            'bg-zinc-800 text-zinc-300'
+                        }`}>
+                            {option.marketOutlook?.replace('_', ' ') || 'STABLE'}
+                        </span>
+                    </div>
                     
-                    <h3 className="text-3xl font-serif font-bold text-white mb-2 leading-none group-hover:underline decoration-1 underline-offset-4">
+                    <h3 className="text-2xl md:text-3xl font-serif font-bold text-white mb-2 leading-tight group-hover:underline decoration-1 underline-offset-4 break-words">
                         {option.role}
                     </h3>
                     <div className="flex items-center gap-2 text-zinc-400 font-mono text-xs mt-3 border-b border-zinc-800 pb-4">
-                        <DollarSign size={12} />
-                        {option.salaryRange}
+                        <DollarSign size={12} className="shrink-0" />
+                        <span className="truncate">{option.salaryRange}</span>
                     </div>
                 </div>
 
-                <div className="p-8 pt-4 flex-grow space-y-8">
+                <div className="p-6 md:p-8 pt-4 flex-grow space-y-6 overflow-hidden">
                     
                     {/* The Logic - Why it Fits */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                          <div className="flex items-center gap-2 mb-2">
-                            <Target size={12} className="text-white" />
+                            <Target size={12} className="text-white shrink-0" />
                             <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">
                                 The Logic (Why This Role?)
                             </span>
                          </div>
-                         <p className="text-sm text-zinc-400 italic leading-relaxed border-l-2 border-zinc-700 pl-4">
+                         <p className="text-sm text-zinc-400 italic leading-relaxed border-l-2 border-zinc-700 pl-4 break-words">
                             "{option.whyItFits}"
                          </p>
                     </div>
 
                     {/* The Translation Layer - HIGH VALUE FEATURE */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                          <div className="flex items-center gap-2 mb-2">
-                            <Activity size={12} className="text-white" />
+                            <Activity size={12} className="text-white shrink-0" />
                             <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">
                                 Resume Translation
                             </span>
                          </div>
                          
-                         <div className="bg-zinc-900/30 border border-zinc-800 p-0">
+                         <div className="bg-zinc-900/30 border border-zinc-800 overflow-hidden">
                             {/* Original */}
-                            <div className="p-4 border-b border-zinc-800 bg-black/50">
+                            <div className="p-3 md:p-4 border-b border-zinc-800 bg-black/50">
                                 <span className="text-[9px] font-mono text-zinc-600 uppercase block mb-1">Current (Weak)</span>
-                                <p className="text-zinc-500 font-serif italic text-sm line-through decoration-zinc-700">
+                                <p className="text-zinc-500 font-serif italic text-sm line-through decoration-zinc-700 break-words">
                                     "{option.translationLayer?.original || "Standard experience..."}"
                                 </p>
                             </div>
                             
                             {/* Translated */}
-                            <div className="p-4 bg-white/5 relative overflow-hidden">
+                            <div className="p-3 md:p-4 bg-white/5 relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-white"></div>
                                 <span className="text-[9px] font-mono text-white uppercase block mb-1">Pivot (Strong)</span>
-                                <p className="text-white font-bold text-sm leading-relaxed">
+                                <p className="text-white font-bold text-sm leading-relaxed break-words">
                                     "{option.translationLayer?.adapted || "Strategic experience..."}"
                                 </p>
                             </div>
@@ -107,15 +106,15 @@ export const CareerPivot: React.FC<CareerPivotProps> = ({ result, onClose, onGet
                     </div>
 
                     {/* Bridge Project */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                          <div className="flex items-center gap-2 mb-2">
-                            <Hammer size={12} className="text-white" />
+                            <Hammer size={12} className="text-white shrink-0" />
                             <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">
                                 Bridge Project
                             </span>
                          </div>
-                         <div className="p-4 border border-dashed border-zinc-700 bg-transparent relative">
-                             <p className="text-zinc-300 text-sm leading-relaxed font-mono text-xs">
+                         <div className="p-3 md:p-4 border border-dashed border-zinc-700 bg-transparent">
+                             <p className="text-zinc-300 text-xs md:text-sm leading-relaxed font-mono break-words">
                                 {option.bridgeProject || option.gapAnalysis}
                              </p>
                          </div>
@@ -127,10 +126,10 @@ export const CareerPivot: React.FC<CareerPivotProps> = ({ result, onClose, onGet
                              <span>Pivot Difficulty</span>
                              <span>{option.fitScore}% Match</span>
                          </div>
-                         <div className="h-1 w-full bg-zinc-800">
+                         <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
                              <div 
-                                className="h-full bg-white" 
-                                style={{ width: `${option.fitScore}%` }}
+                                className="h-full bg-white transition-all duration-500" 
+                                style={{ width: `${Math.min(Math.max(option.fitScore || 0, 0), 100)}%` }}
                              ></div>
                          </div>
                     </div>
