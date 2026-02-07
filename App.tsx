@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, lazy, Suspense, useCallback, useMem
 import { FileUpload } from './components/FileUpload';
 import { SettingsModal } from './components/SettingsModal';
 import { HistoryDrawer } from './components/HistoryDrawer';
+import { APP_NAME, APP_TAGLINE, LEGACY_STORAGE_KEYS, STORAGE_KEYS } from './constants/appConfig';
 
 // Code-split heavy components for faster initial load
 const RoastDashboard = lazy(() => import('./components/RoastDashboard').then(m => ({ default: m.RoastDashboard })));
@@ -51,6 +52,30 @@ const DEFAULT_CONFIG: AIConfig = {
   baseUrl: 'https://api.openai.com/v1'
 };
 
+const readPersistedData = <T,>(primaryKey: string, legacyKey: string): T | null => {
+  const primaryValue = localStorage.getItem(primaryKey);
+  if (primaryValue) {
+    try {
+      return JSON.parse(primaryValue) as T;
+    } catch {
+      localStorage.removeItem(primaryKey);
+    }
+  }
+
+  const legacyValue = localStorage.getItem(legacyKey);
+  if (!legacyValue) return null;
+
+  try {
+    const parsed = JSON.parse(legacyValue) as T;
+    localStorage.setItem(primaryKey, legacyValue);
+    localStorage.removeItem(legacyKey);
+    return parsed;
+  } catch {
+    localStorage.removeItem(legacyKey);
+    return null;
+  }
+};
+
 const App: React.FC = () => {
   const [mode, setMode] = useState<'SOLO' | 'GROUP'>('SOLO');
   const [file, setFile] = useState<File | null>(null);
@@ -93,14 +118,14 @@ const App: React.FC = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const savedConfig = localStorage.getItem('careerfry_config');
-    if (savedConfig) {
-      try { setAiConfig(JSON.parse(savedConfig)); } catch (e) {}
-    }
-    const savedHistory = localStorage.getItem('careerfry_history');
-    if (savedHistory) {
-      try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
-    }
+    const savedConfig = readPersistedData<AIConfig>(STORAGE_KEYS.config, LEGACY_STORAGE_KEYS.config);
+    if (savedConfig) setAiConfig(savedConfig);
+
+    const savedHistory = readPersistedData<(AnalysisResult | ComparisonResult)[]>(
+      STORAGE_KEYS.history,
+      LEGACY_STORAGE_KEYS.history
+    );
+    if (savedHistory) setHistory(savedHistory);
   }, []);
 
   useEffect(() => {
@@ -111,13 +136,13 @@ const App: React.FC = () => {
 
   const handleSaveSettings = useCallback((newConfig: AIConfig) => {
     setAiConfig(newConfig);
-    localStorage.setItem('careerfry_config', JSON.stringify(newConfig));
+    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(newConfig));
   }, []);
 
   const saveToHistory = useCallback((newResult: AnalysisResult | ComparisonResult) => {
     setHistory(prev => {
       const updatedHistory = [newResult, ...prev].slice(0, 10);
-      localStorage.setItem('careerfry_history', JSON.stringify(updatedHistory));
+      localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(updatedHistory));
       return updatedHistory;
     });
   }, []);
@@ -132,14 +157,14 @@ const App: React.FC = () => {
         const updatedHistory = prev.map(h => 
           (h.timestamp === result.timestamp) ? updatedResult : h
         );
-        localStorage.setItem('careerfry_history', JSON.stringify(updatedHistory));
+        localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(updatedHistory));
         return updatedHistory;
       });
   }, [result]);
 
   const clearHistory = useCallback(() => {
     setHistory([]);
-    localStorage.removeItem('careerfry_history');
+    localStorage.removeItem(STORAGE_KEYS.history);
   }, []);
 
   const handleApiError = useCallback((err: any) => {
@@ -153,7 +178,7 @@ const App: React.FC = () => {
       setLoadingAction(null);
   }, [result, comparisonResult]);
 
-  const handleRoast = async () => {
+  const handleAnalyzeResume = async () => {
     if (!file && !resumeText.trim()) return;
     setAppState(AppState.ANALYZING);
     setErrorMsg("");
@@ -311,8 +336,8 @@ const App: React.FC = () => {
           <div className="flex items-center gap-4 cursor-pointer group" onClick={handleReset}>
             <div className="bg-white text-black p-2"><Command size={24} /></div>
             <div>
-              <h1 className="font-serif font-bold text-2xl leading-none tracking-tight text-white">RESUME_AUDITOR_V5</h1>
-              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-1">Total Warfare Edition</p>
+              <h1 className="font-serif font-bold text-2xl leading-none tracking-tight text-white">{APP_NAME}</h1>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-1">{APP_TAGLINE}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -336,8 +361,8 @@ const App: React.FC = () => {
             </div>
 
             <div className="text-center mb-16 border-b border-zinc-800 pb-12">
-              <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tighter text-white">{mode === 'SOLO' ? "Ruthless. Specific. Data-Driven." : "The Talent Benchmark."}</h1>
-              <p className="text-lg text-zinc-400 font-serif italic max-w-xl mx-auto leading-relaxed">{mode === 'SOLO' ? "\"Stop guessing. Let the AI tear apart your CV with precision context.\"" : "\"Rank up to 5 candidates objectively against your specific criteria.\""}</p>
+              <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tighter text-white">{mode === 'SOLO' ? "Focused. Actionable. Evidence-Based." : "Objective Candidate Benchmarking."}</h1>
+              <p className="text-lg text-zinc-400 font-serif italic max-w-xl mx-auto leading-relaxed">{mode === 'SOLO' ? "\"Get practical resume feedback with role-aware context and clear next steps.\"" : "\"Compare up to 5 candidates against the same role criteria.\""}</p>
             </div>
 
             <div className="grid md:grid-cols-12 gap-12">
@@ -353,13 +378,13 @@ const App: React.FC = () => {
                             </div>
                         )}
                         <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-3"><label className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2"><Briefcase size={12} /> Target Role</label><input type="text" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} className="w-full bg-black border border-zinc-700 p-3 text-sm text-white focus:border-white outline-none font-mono placeholder:text-zinc-800 uppercase" placeholder="e.g. Wizard, Janitor, CEO" /></div>
+                            <div className="space-y-3"><label className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2"><Briefcase size={12} /> Target Role</label><input type="text" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} className="w-full bg-black border border-zinc-700 p-3 text-sm text-white focus:border-white outline-none font-mono placeholder:text-zinc-800 uppercase" placeholder="e.g. Product Manager, Backend Engineer" /></div>
                             <div className="space-y-3"><label className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2"><BarChart size={12} /> Seniority Level</label><select value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value)} className="w-full bg-black border border-zinc-700 p-3 text-sm text-white focus:border-white outline-none font-mono uppercase appearance-none"><option>Intern / Student</option><option>Junior (0-2 Yrs)</option><option>Mid-Level (3-5 Yrs)</option><option>Senior (5-8 Yrs)</option><option>Lead / Manager</option><option>Executive / VP</option></select></div>
                         </div>
                         <div className="mb-8 group"><label className="text-xs font-mono font-bold text-zinc-500 uppercase mb-3 block tracking-widest">Job Description / Context (Optional)</label><textarea className="w-full bg-black border border-zinc-700 p-6 text-sm text-white focus:border-white outline-none transition-all resize-none h-32 font-mono" placeholder="// PASTE JOB DESCRIPTION HERE..." value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} /></div>
                         {mode === 'SOLO' ? (
-                            <button onClick={handleRoast} disabled={!isSoloReady || appState === AppState.ANALYZING} className={`w-full py-5 text-sm font-mono font-bold uppercase tracking-[0.2em] flex items-center justify-center transition-all border group ${!isSoloReady ? 'border-zinc-800 bg-zinc-900 text-zinc-600 cursor-not-allowed' : 'border-white bg-white text-black hover:bg-zinc-200 shadow-xl shadow-white/10'}`}>
-                                {appState === AppState.ANALYZING ? <><Loader2 className="animate-spin mr-3" /> Auditing...</> : <span className="group-hover:scale-105 transition-transform duration-300">Start Audit</span>}
+                            <button onClick={handleAnalyzeResume} disabled={!isSoloReady || appState === AppState.ANALYZING} className={`w-full py-5 text-sm font-mono font-bold uppercase tracking-[0.2em] flex items-center justify-center transition-all border group ${!isSoloReady ? 'border-zinc-800 bg-zinc-900 text-zinc-600 cursor-not-allowed' : 'border-white bg-white text-black hover:bg-zinc-200 shadow-xl shadow-white/10'}`}>
+                                {appState === AppState.ANALYZING ? <><Loader2 className="animate-spin mr-3" /> Analyzing...</> : <span className="group-hover:scale-105 transition-transform duration-300">Analyze Resume</span>}
                             </button>
                         ) : (
                             <button onClick={handleComparator} disabled={comparisonCandidates.length < 2 || appState === AppState.COMPARING} className={`w-full py-5 text-sm font-mono font-bold uppercase tracking-[0.2em] flex items-center justify-center transition-all border ${comparisonCandidates.length < 2 ? 'border-zinc-800 bg-zinc-900 text-zinc-600 cursor-not-allowed' : 'border-white bg-white text-black hover:bg-zinc-200 shadow-xl shadow-white/10'}`}>
@@ -370,7 +395,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="md:col-span-4 space-y-8 md:pt-4">
-                   <div className="border-t border-zinc-800 pt-4"><h3 className="font-serif font-bold text-white text-xl mb-2">Protocol</h3><p className="text-zinc-500 text-sm leading-relaxed">System handles all professions including fictional scenarios. Strict confidentiality.</p></div>
+                   <div className="border-t border-zinc-800 pt-4"><h3 className="font-serif font-bold text-white text-xl mb-2">How It Works</h3><p className="text-zinc-500 text-sm leading-relaxed">Upload resume content, set role context, and generate targeted analysis plus follow-up assets.</p></div>
                 </div>
             </div>
           </div>
@@ -383,7 +408,7 @@ const App: React.FC = () => {
             
             <div className="max-w-6xl mx-auto mt-12 pb-20 border-t border-zinc-800 pt-12 no-print">
                <div className="bg-black border border-dashed border-zinc-800 p-8">
-                  <h3 className="text-xl font-serif font-bold text-white mb-6 text-center">Executive Actions</h3>
+                  <h3 className="text-xl font-serif font-bold text-white mb-6 text-center">Follow-up Tools</h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       <button onClick={() => setShowRemaster(true)} className="px-4 py-6 font-mono font-bold uppercase tracking-widest flex flex-col items-center gap-3 border bg-black border-zinc-800 text-zinc-400 hover:text-white hover:border-white hover:bg-zinc-900"><Hammer size={20} /> Remaster</button>

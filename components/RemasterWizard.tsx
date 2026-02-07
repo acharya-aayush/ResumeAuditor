@@ -228,7 +228,7 @@ export const RemasterWizard: React.FC<RemasterWizardProps> = ({ onRemaster, resu
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <Github size={16} className="text-white" />
-                        <span className="text-xs font-mono font-bold text-white uppercase tracking-widest">GitHub Import V4</span>
+                        <span className="text-xs font-mono font-bold text-white uppercase tracking-widest">GitHub Project Import</span>
                     </div>
                 </div>
                 
@@ -352,11 +352,11 @@ export const RemasterWizard: React.FC<RemasterWizardProps> = ({ onRemaster, resu
                 {isForging ? (
                     <>
                         <Loader2 className="animate-spin" size={14} />
-                        Forging...
+                        Generating...
                     </>
                 ) : (
                     <>
-                        Forge New Resume
+                        Generate Resume Draft
                         <ArrowRight size={14} />
                     </>
                 )}
@@ -373,7 +373,7 @@ export const RemasterWizard: React.FC<RemasterWizardProps> = ({ onRemaster, resu
     <div className="w-full max-w-7xl mx-auto animate-in fade-in duration-700 pb-20 mt-12 pt-12 border-t border-zinc-800">
        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 border-b border-white pb-6 gap-4 no-print">
           <div>
-            <h2 className="text-4xl font-serif font-bold text-white">The Typeset Proof</h2>
+            <h2 className="text-4xl font-serif font-bold text-white">Remastered Resume</h2>
             <p className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">ATS Optimized • Fact-Checked • Streamlined</p>
           </div>
           
