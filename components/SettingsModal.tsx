@@ -213,9 +213,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
           throw new Error('Ollama not responding');
         }
       } else if (localConfig.provider === AIProvider.GEMINI) {
-        const res = await fetch(
-          `${localConfig.baseUrl || 'https://generativelanguage.googleapis.com/v1beta'}/models?key=${localConfig.apiKey}`
-        );
+        const baseUrl = (localConfig.baseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
+        const modelName = localConfig.modelName || 'gemini-2.5-flash';
+        const res = await fetch(`${baseUrl}/models/${encodeURIComponent(modelName)}:generateContent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': localConfig.apiKey,
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'ping' }] }],
+            generationConfig: { maxOutputTokens: 1, temperature: 0 },
+          }),
+        });
         if (res.ok) {
           setTestStatus('success');
           setTestMessage('API key valid');

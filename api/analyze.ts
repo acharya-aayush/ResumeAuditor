@@ -1,19 +1,137 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { kv } from '@vercel/kv';
 
-// --- CONFIGURATION ---
-const DAILY_LIMIT = 10;
-const RATE_LIMIT_WINDOW = 60 * 60 * 24; // 24 Hours in seconds
+const DAILY_LIMIT = Number(process.env.DAILY_LIMIT || '10');
+const RATE_LIMIT_WINDOW_SECONDS = 60 * 60 * 24; // 24 hours
+const MAX_BODY_SIZE_BYTES = 1024 * 1024; // 1MB
+const MODEL_NAME_PATTERN = /^[a-zA-Z0-9._-]+$/;
+const UPSTREAM_TIMEOUT_MS = 30_000;
 
-// Fallback In-Memory Storage (Resets on server cold start, good for simple protection)
 const memoryStore = new Map<string, { count: number; expiry: number }>();
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // 1. CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', "true");
-  res.setHeader('Access-Control-Allow-Origin', '*');
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
+  },
+};
+
+type AnalyzeRequestBody = {
+  model?: unknown;
+  payload?: unknown;
+};
+
+const parseEnvList = (input?: string): string[] => {
+  if (!input) return [];
+  return input
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+};
+
+const getAllowedOrigins = (): string[] => parseEnvList(process.env.ALLOWED_ORIGINS);
+
+const getAllowedModels = (): string[] => parseEnvList(process.env.ALLOWED_GEMINI_MODELS);
+
+const isAllowedModel = (model: string): boolean => {
+  const allowList = getAllowedModels();
+  if (allowList.length > 0) {
+    return allowList.includes(model);
+  }
+
+  return MODEL_NAME_PATTERN.test(model) && model.startsWith('gemini-');
+};
+
+const applySecurityHeaders = (res: VercelResponse): void => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+};
+
+const applyCorsHeaders = (req: VercelRequest, res: VercelResponse): boolean => {
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
+  const allowedOrigins = getAllowedOrigins();
+
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (!origin) {
+    return true;
+  }
+
+  if (allowedOrigins.length === 0) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return true;
+  }
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    return true;
+  }
+
+  return false;
+};
+
+const getClientIp = (req: VercelRequest): string => {
+  const forwardedForHeader = req.headers['x-forwarded-for'];
+  const forwardedFor = Array.isArray(forwardedForHeader)
+    ? forwardedForHeader[0]
+    : forwardedForHeader || '';
+  const firstForwardedIp = forwardedFor.split(',')[0]?.trim();
+
+  const realIpHeader = req.headers['x-real-ip'];
+  const realIp = Array.isArray(realIpHeader) ? realIpHeader[0] : realIpHeader;
+
+  return firstForwardedIp || realIp || req.socket.remoteAddress || 'unknown';
+};
+
+const getPayloadSizeBytes = (body: unknown): number => {
+  try {
+    return Buffer.byteLength(JSON.stringify(body ?? {}), 'utf8');
+  } catch {
+    return MAX_BODY_SIZE_BYTES + 1;
+  }
+};
+
+const incrementUsageCounter = async (clientIp: string): Promise<number> => {
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    const key = `audit_limit:${clientIp}`;
+    const count = await kv.incr(key);
+    if (count === 1) {
+      await kv.expire(key, RATE_LIMIT_WINDOW_SECONDS);
+    }
+    return count;
+  }
+
+  const now = Date.now();
+  const existing = memoryStore.get(clientIp);
+
+  if (existing && now < existing.expiry) {
+    existing.count += 1;
+    return existing.count;
+  }
+
+  memoryStore.set(clientIp, {
+    count: 1,
+    expiry: now + RATE_LIMIT_WINDOW_SECONDS * 1000,
+  });
+
+  if (memoryStore.size > 10_000) {
+    memoryStore.clear();
+  }
+
+  return 1;
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applySecurityHeaders(res);
+
+  const isCorsAllowed = applyCorsHeaders(req, res);
+  if (!isCorsAllowed) {
+    res.status(403).json({ error: 'Forbidden origin.' });
+    return;
+  }
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -25,85 +143,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // 2. Identify User (IP Based)
-  const rawIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
-  const clientIp = rawIp.split(',')[0].trim();
+  const bodySizeBytes = getPayloadSizeBytes(req.body);
+  if (bodySizeBytes > MAX_BODY_SIZE_BYTES) {
+    res.status(413).json({ error: 'Payload too large.' });
+    return;
+  }
 
-  // 3. Invisible Rate Limiting
+  const body = (req.body ?? {}) as AnalyzeRequestBody;
+  const model = typeof body.model === 'string' ? body.model.trim() : '';
+  const payload = body.payload;
+
+  if (!model || !isAllowedModel(model)) {
+    res.status(400).json({ error: 'Invalid or unsupported model.' });
+    return;
+  }
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    res.status(400).json({ error: 'Invalid payload.' });
+    return;
+  }
+
+  const clientIp = getClientIp(req);
   let currentUsage = 0;
 
   try {
-    // Attempt A: Vercel KV (Redis)
-    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-        const key = `audit_limit:${clientIp}`;
-        const count = await kv.incr(key);
-        if (count === 1) {
-            await kv.expire(key, RATE_LIMIT_WINDOW);
-        }
-        currentUsage = count;
-    } 
-    // Attempt B: Memory Fallback
-    else {
-        const now = Date.now();
-        const record = memoryStore.get(clientIp);
-        
-        if (record && now < record.expiry) {
-            record.count++;
-            currentUsage = record.count;
-        } else {
-            currentUsage = 1;
-            memoryStore.set(clientIp, { 
-                count: 1, 
-                expiry: now + (RATE_LIMIT_WINDOW * 1000) 
-            });
-        }
-        
-        // Garbage collection
-        if (memoryStore.size > 10000) memoryStore.clear();
-    }
+    currentUsage = await incrementUsageCounter(clientIp);
   } catch (error) {
-    console.error("Rate Limit Logic Error:", error);
-    // Fail open to avoid blocking valid users during DB outage
+    console.error('Rate limit error:', error);
+    // Fail open on storage outages to preserve availability.
   }
 
-  // 4. Enforce Limit
   if (currentUsage > DAILY_LIMIT) {
-    res.status(429).json({ 
-      error: 'Daily Limit Reached. Add your own API Key in Settings to continue.' 
+    res.status(429).json({
+      error: 'Daily limit reached. Add your own API key in Settings to continue.',
     });
     return;
   }
 
-  // 5. Secure Proxy
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: 'Server Config Error: Missing GEMINI_API_KEY env var.' });
+    res.status(500).json({ error: 'Server configuration error: missing GEMINI_API_KEY.' });
     return;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+
   try {
-    const { model, payload } = req.body;
-    
-    // Hardcoded to Google to prevent relay attacks
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
     const googleResponse = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
     });
 
     if (!googleResponse.ok) {
-      const errorText = await googleResponse.text();
-      res.status(googleResponse.status).json({ error: `Provider Error: ${errorText}` });
+      const providerErrorText = await googleResponse.text();
+      res.status(googleResponse.status).json({
+        error: 'Provider request failed.',
+        details: providerErrorText.slice(0, 400),
+      });
       return;
     }
 
     const data = await googleResponse.json();
     res.status(200).json(data);
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      res.status(504).json({ error: 'Upstream request timeout.' });
+      return;
+    }
 
-  } catch (error: any) {
-    console.error('Proxy Error:', error);
-    res.status(500).json({ error: error.message || 'Internal Server Error' });
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    console.error('Proxy error:', message);
+    res.status(500).json({ error: message });
+  } finally {
+    clearTimeout(timeout);
   }
 }

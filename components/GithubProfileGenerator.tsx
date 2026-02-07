@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
 import { GithubProfileResult } from '../types';
 import { Copy, Github, X, Check, Code, Eye, FileText } from 'lucide-react';
 
@@ -97,7 +96,7 @@ export const GithubProfileGenerator: React.FC<GithubProfileGeneratorProps> = ({ 
                         /* Ensure horizontally aligned badges work */
                         .markdown-body p[align="center"] { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
                     `}</style>
-                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>{result.markdownContent}</ReactMarkdown>
+                    <ReactMarkdown skipHtml>{result.markdownContent}</ReactMarkdown>
                 </div>
             </div>
         ) : (

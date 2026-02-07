@@ -2,8 +2,7 @@ import { AnalysisResult, AIConfig, AIProvider, RemasterInput, RemasterResult, Co
 
 // --- UTILITIES ---
 
-// Simple request deduplication to prevent double-clicks
-const pendingRequests = new Map<string, Promise<any>>();
+const REQUEST_TIMEOUT_MS = 30_000;
 
 const fileToBase64 = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -444,8 +443,8 @@ const executeGeminiAPI = async <T>(
     const modelName = config.modelName || 'gemini-2.5-flash';
     const baseUrl = config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
     
-    // Gemini uses a different endpoint format
-    const endpoint = `${baseUrl}/models/${modelName}:generateContent?key=${config.apiKey}`;
+    // Send API key via header to avoid exposing it in URLs/logs.
+    const endpoint = `${baseUrl}/models/${encodeURIComponent(modelName)}:generateContent`;
     
     // Build content parts
     const parts: any[] = [];
@@ -493,11 +492,28 @@ const executeGeminiAPI = async <T>(
         }
     };
     
-    const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+        res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': config.apiKey,
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+    } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error('Gemini request timed out. Please try again.');
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
     
     if (!res.ok) {
         const errText = await res.text();
