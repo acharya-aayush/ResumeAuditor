@@ -21,7 +21,7 @@ export default defineConfig({
           // Vendor chunks - rarely change, better caching
           'vendor-react': ['react', 'react-dom'],
           'vendor-charts': ['recharts'],
-          'vendor-markdown': ['react-markdown', 'rehype-raw'],
+          'vendor-markdown': ['react-markdown'],
           'vendor-docx': ['docx', 'file-saver'],
         }
       }
