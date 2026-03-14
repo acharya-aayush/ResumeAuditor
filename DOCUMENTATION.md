@@ -314,8 +314,13 @@ enum AppState {
 
 User configuration is persisted to localStorage:
 
-- `careerfry_config`: AI provider settings
-- `careerfry_history`: Analysis history (last 10)
+- `resume_auditor_config`: AI provider settings
+- `resume_auditor_history`: Analysis history (last 10)
+
+Legacy keys are migrated automatically on first load:
+
+- `careerfry_config`
+- `careerfry_history`
 
 ### 5.3 Component State
 
@@ -488,3 +493,39 @@ All types are defined in `types.ts`. Key interfaces:
 - Functional components with hooks
 - Tailwind CSS for styling
 - No inline styles except for dynamic values
+
+---
+
+## 11. Engineering Quality Checklist
+
+This project now uses an explicit quality checklist to avoid common large-file and low-maintainability failure modes.
+
+### 11.1 Structural Smells to Prevent
+
+- Long method and large class growth in service files
+- Duplicate request construction logic across providers
+- Excessive `any` usage when concrete types are available
+- UI components that mix rendering, networking, and data shaping
+- Legacy APIs in active paths (for example deprecated string APIs)
+
+### 11.2 Quality Gates for New Changes
+
+- Keep feature modules focused: one file should have one primary responsibility
+- Extract shared utilities before duplicating error parsing or JSON repair logic
+- Prefer explicit interfaces for external API responses
+- Keep commit scope atomic: one behavioral change per commit
+- Run validation before merge: `npm run typecheck`, `npm run build`, `npm run audit:prod`
+
+### 11.3 React and TypeScript Conventions
+
+- Use `unknown` in `catch` blocks and normalize errors through a shared helper
+- Prefer named helper functions over deeply nested inline handlers in JSX
+- Keep view components declarative and move data normalization into helpers
+- Use stable ID generation (`crypto.randomUUID`) instead of ad-hoc random strings
+
+### 11.4 Refactor Priorities (Current)
+
+- Continue reducing size and responsibility of `services/aiService.ts`
+- Keep shrinking `components/SettingsModal.tsx` and `components/RemasterWizard.tsx`
+- Eliminate remaining high-risk `any` hotspots in service boundaries first
+- Expand automated tests around parser and provider utilities
