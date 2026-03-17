@@ -76,6 +76,14 @@ const readPersistedData = <T,>(primaryKey: string, legacyKey: string): T | null 
   }
 };
 
+const createCandidateId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 const App: React.FC = () => {
   const [mode, setMode] = useState<'SOLO' | 'GROUP'>('SOLO');
   const [file, setFile] = useState<File | null>(null);
@@ -320,10 +328,45 @@ const App: React.FC = () => {
     setShowRemaster(false); setShowColdEmail(false); setErrorMsg("");
   };
 
-  const toggleMode = (newMode: 'SOLO' | 'GROUP') => { handleReset(); setMode(newMode); };
-  const addComparisonFile = (newFile: File) => { if (comparisonCandidates.length >= 5) return; setComparisonCandidates([...comparisonCandidates, { type: 'FILE', file: newFile, id: Math.random().toString(36).substr(2, 9) }]); };
-  const addComparisonText = () => { if (!newTextName || !newTextContent) return; setComparisonCandidates([...comparisonCandidates, { type: 'TEXT', name: newTextName, text: newTextContent, id: Math.random().toString(36).substr(2, 9) }]); setNewTextName(""); setNewTextContent(""); setIsAddingText(false); };
-  const removeCandidate = (id: string) => { setComparisonCandidates(comparisonCandidates.filter(c => c.id !== id)); };
+  const toggleMode = (newMode: 'SOLO' | 'GROUP') => {
+    handleReset();
+    setMode(newMode);
+  };
+
+  const addComparisonFile = (newFile: File) => {
+    if (comparisonCandidates.length >= 5) return;
+
+    setComparisonCandidates((prev) => [
+      ...prev,
+      {
+        type: 'FILE',
+        file: newFile,
+        id: createCandidateId(),
+      },
+    ]);
+  };
+
+  const addComparisonText = () => {
+    if (!newTextName || !newTextContent) return;
+
+    setComparisonCandidates((prev) => [
+      ...prev,
+      {
+        type: 'TEXT',
+        name: newTextName,
+        text: newTextContent,
+        id: createCandidateId(),
+      },
+    ]);
+
+    setNewTextName('');
+    setNewTextContent('');
+    setIsAddingText(false);
+  };
+
+  const removeCandidate = (id: string) => {
+    setComparisonCandidates((prev) => prev.filter((candidate) => candidate.id !== id));
+  };
   const isSoloReady = (file !== null) || (resumeText.trim().length > 50);
 
   return (
