@@ -8,17 +8,21 @@ interface Plan90DaysProps {
     onClose: () => void;
 }
 
-export const Plan90Days: React.FC<Plan90DaysProps> = ({ result, onClose }) => {
-    // Provide safe defaults if data is missing
-    const safeData = (data: any) => ({
-        focus: data?.focus || 'Not specified',
-        goals: Array.isArray(data?.goals) ? data.goals : []
-    });
+type PlanPhase = {
+    focus: string;
+    goals: string[];
+};
 
+const normalizePhase = (data?: Partial<PlanPhase> | null): PlanPhase => ({
+    focus: data?.focus || 'Not specified',
+    goals: Array.isArray(data?.goals) ? data.goals : [],
+});
+
+export const Plan90Days: React.FC<Plan90DaysProps> = ({ result, onClose }) => {
     const phases = [
-        { title: "Days 0-30", data: safeData(result?.days30), color: "text-zinc-500", border: "border-zinc-700" },
-        { title: "Days 31-60", data: safeData(result?.days60), color: "text-zinc-300", border: "border-zinc-500" },
-        { title: "Days 61-90", data: safeData(result?.days90), color: "text-white", border: "border-white" },
+        { title: "Days 0-30", data: normalizePhase(result?.days30), color: "text-zinc-500", border: "border-zinc-700" },
+        { title: "Days 31-60", data: normalizePhase(result?.days60), color: "text-zinc-300", border: "border-zinc-500" },
+        { title: "Days 61-90", data: normalizePhase(result?.days90), color: "text-white", border: "border-white" },
     ];
 
     return (
