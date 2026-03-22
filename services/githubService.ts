@@ -1,6 +1,24 @@
 
 import { GitHubRepo } from '../types';
 
+interface GitHubRepoApiResponse {
+    id: number;
+    name: string;
+    description: string | null;
+    language: string | null;
+    stargazers_count: number;
+    html_url: string;
+    updated_at: string;
+    fork: boolean;
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+    return fallback;
+};
+
 // Helper to extract username from input
 const extractUsername = (input: string): string => {
     const cleaned = input.trim();
@@ -22,7 +40,7 @@ const fetchFileContent = async (username: string, repoName: string, path: string
         
         if (!response.ok) return "";
         return await response.text();
-    } catch (e) {
+    } catch {
         return "";
     }
 };
@@ -100,24 +118,24 @@ export const listGitHubRepos = async (input: string): Promise<GitHubRepo[]> => {
             throw new Error("Failed to fetch repositories.");
         }
 
-        const repos: any[] = await response.json();
+        const repos = (await response.json()) as GitHubRepoApiResponse[];
 
         return repos
-            .filter((r: any) => !r.fork)
-            .map((r: any) => ({
-                id: r.id,
-                name: r.name,
-                description: r.description || "",
-                language: r.language || "N/A",
-                stars: r.stargazers_count,
-                url: r.html_url,
-                updatedAt: new Date(r.updated_at).toLocaleDateString(),
+            .filter((repo) => !repo.fork)
+            .map((repo) => ({
+                id: repo.id,
+                name: repo.name,
+                description: repo.description || "",
+                language: repo.language || "N/A",
+                stars: repo.stargazers_count,
+                url: repo.html_url,
+                updatedAt: new Date(repo.updated_at).toLocaleDateString(),
                 selected: false
             }));
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("GitHub Fetch Error:", error);
-        throw new Error(error.message || "Could not fetch GitHub data.");
+        throw new Error(getErrorMessage(error, "Could not fetch GitHub data."));
     }
 };
 
