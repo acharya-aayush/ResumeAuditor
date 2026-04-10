@@ -3,6 +3,7 @@ import { FileUpload } from './components/FileUpload';
 import { SettingsModal } from './components/SettingsModal';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { APP_NAME, APP_TAGLINE, LEGACY_STORAGE_KEYS, STORAGE_KEYS } from './constants/appConfig';
+import { getErrorMessage } from './utils/error';
 
 // Code-split heavy components for faster initial load
 const RoastDashboard = lazy(() => import('./components/RoastDashboard').then(m => ({ default: m.RoastDashboard })));
@@ -175,9 +176,9 @@ const App: React.FC = () => {
     localStorage.removeItem(STORAGE_KEYS.history);
   }, []);
 
-  const handleApiError = useCallback((err: any) => {
+    const handleApiError = useCallback((err: unknown) => {
       console.error(err);
-      setErrorMsg(err.message || "An error occurred. Please try again.");
+      setErrorMsg(getErrorMessage(err));
       // Do NOT reset app state on error to allow retry
       // Only set to ERROR if we don't have a result yet (initial loading)
       if (!result && !comparisonResult) {
@@ -195,7 +196,7 @@ const App: React.FC = () => {
       setResult(data);
       saveToHistory(data);
       setAppState(AppState.COMPLETE);
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(err);
     }
   };
@@ -209,7 +210,7 @@ const App: React.FC = () => {
           setComparisonResult(data);
           saveToHistory(data); // Save comparison to history
           setAppState(AppState.COMPARISON_COMPLETE);
-      } catch (err: any) {
+        } catch (err) {
           handleApiError(err);
       }
   };
@@ -236,7 +237,7 @@ const App: React.FC = () => {
         }
         setRemasterResult(data);
         return data;
-    } catch (err: any) {
+    } catch (err) {
         handleApiError(err);
         throw err;
     }
@@ -258,7 +259,7 @@ const App: React.FC = () => {
           };
           setPlan90Result(validatedData);
           updateCurrentHistory({ plan90Days: validatedData });
-      } catch (err: any) {
+        } catch (err) {
           handleApiError(err);
       } finally {
           setLoadingAction(null);
@@ -274,7 +275,7 @@ const App: React.FC = () => {
            const data = await generateSalaryScripts(file, resumeText, ctx, aiConfig);
            setSalaryResult(data);
            updateCurrentHistory({ salaryNegotiation: data });
-      } catch (err: any) {
+       } catch (err) {
            handleApiError(err);
       } finally {
            setLoadingAction(null);
