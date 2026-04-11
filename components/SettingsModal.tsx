@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Key, Cpu, Lock, Globe, Sparkles, ExternalLink, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 import { AIConfig, AIProvider } from '../types';
+import { getErrorMessage } from '../utils/error';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -243,9 +244,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
           throw new Error('Invalid API key or endpoint');
         }
       }
-    } catch (e: any) {
+    } catch (e) {
       setTestStatus('error');
-      setTestMessage(e.message || 'Connection failed');
+      setTestMessage(getErrorMessage(e, 'Connection failed'));
     }
   };
 
