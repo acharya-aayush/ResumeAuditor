@@ -1,5 +1,6 @@
 
 import { GitHubRepo } from '../types';
+import { getErrorMessage } from '../utils/error';
 
 interface GitHubRepoApiResponse {
     id: number;
@@ -11,13 +12,6 @@ interface GitHubRepoApiResponse {
     updated_at: string;
     fork: boolean;
 }
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-    if (error instanceof Error && error.message) {
-        return error.message;
-    }
-    return fallback;
-};
 
 // Helper to extract username from input
 const extractUsername = (input: string): string => {

@@ -5,6 +5,7 @@ import { ArrowRight, Scissors, PenTool, Check, Copy, Download, Printer, Loader2,
 import * as docx from 'docx';
 import saveAs from 'file-saver';
 import { listGitHubRepos, processSelectedRepos } from '../services/githubService';
+import { getErrorMessage } from '../utils/error';
 
 interface RemasterWizardProps {
   onRemaster: (input: RemasterInput) => Promise<RemasterResult | null>;
@@ -47,9 +48,9 @@ export const RemasterWizard: React.FC<RemasterWizardProps> = ({ onRemaster, resu
     setError(null);
     try {
         await onRemaster(input);
-    } catch (e: any) {
+    } catch (e) {
         console.error("Remaster failed", e);
-        setError(e.message || "An unexpected error occurred during remastering.");
+      setError(getErrorMessage(e, "An unexpected error occurred during remastering."));
     } finally {
         setIsForging(false);
     }
@@ -65,8 +66,8 @@ export const RemasterWizard: React.FC<RemasterWizardProps> = ({ onRemaster, resu
           const repos = await listGitHubRepos(githubUsername);
           setRepoList(repos);
           setShowRepoSelector(true);
-      } catch (err: any) {
-          setGithubError(err.message);
+        } catch (err) {
+          setGithubError(getErrorMessage(err, 'Failed to fetch repositories.'));
       } finally {
           setIsFetchingList(false);
       }
@@ -90,8 +91,8 @@ export const RemasterWizard: React.FC<RemasterWizardProps> = ({ onRemaster, resu
               extraProjects: (prev.extraProjects ? prev.extraProjects + "\n\n" : "") + `[IMPORTED FROM GITHUB]:\n${projectText}`
           }));
           setShowRepoSelector(false); // Close selector on success
-      } catch (err: any) {
-          setGithubError(err.message);
+        } catch (err) {
+          setGithubError(getErrorMessage(err, 'Failed to import selected repositories.'));
       } finally {
           setIsProcessingRepos(false);
       }
