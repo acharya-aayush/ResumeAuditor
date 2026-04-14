@@ -21,6 +21,42 @@ const fileToBase64 = async (file: File): Promise<string> => {
   });
 };
 
+type JsonSchema = Record<string, unknown>;
+
+type GeminiTextPart = { text: string };
+type GeminiInlinePart = {
+    inline_data: {
+        mime_type: string;
+        data: string;
+    };
+};
+type GeminiContentPart = GeminiTextPart | GeminiInlinePart;
+
+type OpenAITextContentPart = { type: 'text'; text: string };
+type OpenAIImageContentPart = { type: 'image_url'; image_url: { url: string } };
+type OpenAIContentPart = OpenAITextContentPart | OpenAIImageContentPart;
+
+type OpenAIMessage = {
+    role: 'system' | 'user';
+    content: string | OpenAIContentPart[];
+};
+
+type OpenAIPayload = {
+    model: string;
+    messages: OpenAIMessage[];
+    temperature: number;
+    max_tokens: number;
+    options?: {
+        num_predict: number;
+        temperature: number;
+        top_p: number;
+        repeat_penalty: number;
+    };
+    response_format?: {
+        type: 'json_object';
+    };
+};
+
 const SAFETY_PROTOCOL = `CRITICAL INSTRUCTIONS:
 1. Output ONLY valid JSON - no markdown fences, no explanations, no text before/after
 2. All string values must use double quotes and escape internal quotes with backslash
@@ -301,7 +337,7 @@ const executeGeminiAPI = async <T>(
     const endpoint = `${baseUrl}/models/${encodeURIComponent(modelName)}:generateContent`;
     
     // Build content parts
-    const parts: any[] = [];
+    const parts: GeminiContentPart[] = [];
     
     // Add image if provided
     if (file) {
@@ -412,7 +448,7 @@ const executeAI = async <T>(
     systemPrompt: string, 
     userPrompt: string, 
     config: AIConfig,
-    schema: any
+    schema: JsonSchema
 ): Promise<T> => {
     
     const schemaText = `\nOUTPUT JSON SCHEMA:\n${JSON.stringify(schema)}`;
@@ -427,7 +463,7 @@ const executeAI = async <T>(
     }
 
     // --- OpenAI-Compatible API ---
-    const messages: any[] = [{ role: "system", content: fullSystemPrompt }];
+    const messages: OpenAIMessage[] = [{ role: "system", content: fullSystemPrompt }];
     
     if (file && !isLocalModel) {
          const b64 = await fileToBase64(file);
@@ -460,7 +496,7 @@ const executeAI = async <T>(
         headers['X-Title'] = 'Resume Auditor';
     }
     
-    const payload: any = {
+    const payload: OpenAIPayload = {
         model: config.modelName,
         messages,
         temperature: 0.7,
@@ -589,7 +625,7 @@ export const compareResumes = async (candidates: CandidateInput[], jobDesc: stri
     const isLocalModel = config.provider === AIProvider.OLLAMA;
     
     // OpenAI Compatible API
-    const contentParts: any[] = [{ type: 'text', text: promptContent }];
+    const contentParts: OpenAIContentPart[] = [{ type: 'text', text: promptContent }];
     let hasFiles = false;
     for (const c of candidates) {
          if (c.type === 'FILE' && !isLocalModel) {
@@ -602,11 +638,16 @@ export const compareResumes = async (candidates: CandidateInput[], jobDesc: stri
              contentParts.push({ type: 'text', text: `Candidate ${c.name}: ${c.text}` });
          }
     }
+
+    const textOnlyPrompt = contentParts
+        .filter((part): part is OpenAITextContentPart => part.type === 'text')
+        .map((part) => part.text)
+        .join('\n');
     
     const schemaText = `\nSCHEMA: ${JSON.stringify(schema)}`;
-    const messages = [
+    const messages: OpenAIMessage[] = [
         { role: "system", content: PROMPTS.COMPARATOR + schemaText },
-        { role: "user", content: hasFiles && !isLocalModel ? contentParts : contentParts.map(p => p.text).join('\n') }
+        { role: "user", content: hasFiles && !isLocalModel ? contentParts : textOnlyPrompt }
     ];
     
     const baseUrl = config.baseUrl || 'https://api.openai.com/v1';
@@ -621,7 +662,7 @@ export const compareResumes = async (candidates: CandidateInput[], jobDesc: stri
         headers['X-Title'] = 'Resume Auditor';
     }
     
-    const payload: any = { 
+    const payload: OpenAIPayload = { 
         model: config.modelName, 
         messages, 
         temperature: 0.5,
