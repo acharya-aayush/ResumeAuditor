@@ -17,6 +17,7 @@ npm run dev
 
 ## Quality Checks
 ```bash
+npm run test
 npm run typecheck
 npm run build
 npm run audit:prod
@@ -42,9 +43,15 @@ components/
   ...
 services/
   aiService.ts
+  ai/
+    jsonUtils.ts
+    jsonUtils.test.ts
   githubService.ts
 constants/
   appConfig.ts
+  aiProviders.ts
+utils/
+  error.ts
 ```
 
 ## Security

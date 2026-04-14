@@ -1,5 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanJsonOutput, safeJsonParse } from './jsonUtils';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+let errorSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  warnSpy.mockRestore();
+  errorSpy.mockRestore();
+});
 
 describe('cleanJsonOutput', () => {
   it('removes markdown fences and trailing commas', () => {
